@@ -30,9 +30,9 @@ public:
 	 * @param[in]  resolution  The resolution
 	 * @param[in]  frame_rate  The frame rate
 	 */
-	StereoCamera(int resolution, double frame_rate): frame_rate_(30.0) {
+  StereoCamera(int device_id, int resolution, double frame_rate): frame_rate_(30.0) {
 
-		camera_ = new cv::VideoCapture(0);
+    camera_ = new cv::VideoCapture(device_id);
 		cv::Mat raw;
 		cv::Mat left_image;
 		cv::Mat right_image;
@@ -103,6 +103,10 @@ public:
 		}
 	}
 
+  inline int getWidth() const {return width_;}
+  inline int getHeight() const {return height_;}
+  inline double getFrameRate() const {return frame_rate_;}
+
 private:
 	cv::VideoCapture* camera_;
 	int width_;
@@ -127,6 +131,7 @@ public:
 		ros::NodeHandle nh;
 		ros::NodeHandle private_nh("~");
 		// get ros param
+    private_nh.param("device_id", device_id_, 0);
 		private_nh.param("resolution", resolution_, 1);
 		private_nh.param("frame_rate", frame_rate_, 30.0);
 		private_nh.param("config_file_location", config_file_location_, std::string("~/SN1267.conf"));
@@ -134,10 +139,18 @@ public:
 		private_nh.param("right_frame_id", right_frame_id_, std::string("right_camera"));
 		private_nh.param("show_image", show_image_, false);
 		private_nh.param("load_zed_config", load_zed_config_, true);
+    private_nh.param("left_camer_info_url", left_camera_info_url_, std::string("package://zed_cpu_ros/config/left.yaml"));
+    private_nh.param("right_camer_info_url", right_camera_info_url_, std::string("package://zed_cpu_ros/config/right.yaml"));
 
 		ROS_INFO("Try to initialize the camera");
-		StereoCamera zed(resolution_, frame_rate_);
-		ROS_INFO("Initialized the camera");
+    StereoCamera zed(device_id_, resolution_, frame_rate_);
+    width_ = static_cast<double>(zed.getWidth() / 2);
+    height_ = static_cast<double>(zed.getHeight());
+
+    ROS_INFO("Initialized the camera: %d x %d @ %.2lf fps",
+             zed.getWidth(),
+             zed.getHeight(),
+             zed.getFrameRate());
 
 		// setup publisher stuff
 		image_transport::ImageTransport it(nh);
@@ -152,7 +165,7 @@ public:
 
 		ROS_INFO("Try load camera calibration files");
 		if (load_zed_config_) {
-			ROS_INFO("Loading from zed calibration files");
+      ROS_INFO_STREAM("Loading from zed calibration files: " << config_file_location_);
 			// get camera info from zed
 			try {
 				getZedCameraInfo(config_file_location_, resolution_, left_info, right_info);
@@ -166,11 +179,11 @@ public:
 			// get config from the left, right.yaml in config
 			camera_info_manager::CameraInfoManager info_manager(nh);
 			info_manager.setCameraName("zed/left");
-			info_manager.loadCameraInfo( "package://zed_cpu_ros/config/left.yaml");
+      info_manager.loadCameraInfo(left_camera_info_url_);
 			left_info = info_manager.getCameraInfo();
 
 			info_manager.setCameraName("zed/right");
-			info_manager.loadCameraInfo( "package://zed_cpu_ros/config/right.yaml");
+      info_manager.loadCameraInfo(right_camera_info_url_);
 			right_info = info_manager.getCameraInfo();
 
 			left_info.header.frame_id = left_frame_id_;
@@ -230,10 +243,10 @@ public:
 		std::string reso_str = "";
 
 		switch (resolution) {
-		case 0: reso_str = "2K"; break;
-		case 1: reso_str = "FHD"; break;
-		case 2: reso_str = "HD"; break;
-		case 3: reso_str = "VGA"; break;
+      case 0: reso_str = "2K"; break;
+      case 1: reso_str = "FHD"; break;
+      case 2: reso_str = "HD"; break;
+      case 3: reso_str = "VGA"; break;
 		}
 		// left value
 		double l_cx = pt.get<double>(left_str + reso_str + ".cx");
@@ -300,16 +313,42 @@ public:
 		// since R is identity, Rl = Rr;
 		left_info.R.fill(0.0);
 		right_info.R.fill(0.0);
-		cv::Mat rvec = (cv::Mat_<double>(3, 1) << rx, ry, rz);
-		cv::Mat rmat(3, 3, CV_64F);
-		cv::Rodrigues(rvec, rmat);
-		int id = 0;
-		cv::MatIterator_<double> it, end;
-		for (it = rmat.begin<double>(); it != rmat.end<double>(); ++it, id++){
-			left_info.R[id] = *it;
-			right_info.R[id] = *it;
-		}
 
+#if 0
+    left_info.R[0] = right_info.R[0] = 1.0;
+    left_info.R[4] = right_info.R[4] = 1.0;
+    left_info.R[8] = right_info.R[8] = 1.0;
+#elif 1
+    cv::Mat rvec = (cv::Mat_<double>(3, 1) << rz, ry, rx);
+    cv::Mat rmat(3, 3, CV_64F);
+    cv::Rodrigues(rvec, rmat);
+    cv::Mat rmat_inv = rmat.inv();
+
+//    cv::Mat rvec_z = (cv::Mat_<double>(3, 1) << 0.0, 0.0, rz);
+//    cv::Mat rvec_y = (cv::Mat_<double>(3, 1) << 0.0, ry , 0.0);
+//    cv::Mat rvec_x = (cv::Mat_<double>(3, 1) << rx , 0.0, 0.0);
+//    cv::Mat rmat_z(3, 3, CV_64F);
+//    cv::Mat rmat_y(3, 3, CV_64F);
+//    cv::Mat rmat_x(3, 3, CV_64F);
+//    cv::Rodrigues(rvec_z, rmat_z);
+//    cv::Rodrigues(rvec_y, rmat_y);
+//    cv::Rodrigues(rvec_x, rmat_x);
+//    cv::Mat rmat2 = rmat_z * rmat_x * rmat_y;
+//    ROS_INFO_STREAM("Mat1: " << rmat);
+//    ROS_INFO_STREAM("Mat2: " << rmat2);
+
+    unsigned int id = 0;
+    for (cv::MatIterator_<double> it = rmat.begin<double>();
+         it != rmat.end<double>(); ++it, id++){
+      left_info.R[id] = *it;
+      //right_info.R[id] = *it;
+    }
+    id = 0;
+    for (cv::MatIterator_<double> it = rmat_inv.begin<double>();
+         it != rmat_inv.end<double>(); ++it, id++){
+      right_info.R[id] = *it;
+    }
+#endif
 		// Projection/camera matrix
 		//     [fx'  0  cx' Tx]
 		// P = [ 0  fy' cy' Ty]
@@ -324,7 +363,7 @@ public:
 		right_info.P.fill(0.0);
 		right_info.P[0] = r_fx;
 		right_info.P[2] = r_cx;
-		right_info.P[3] = (-1 * l_fx * baseline);
+    right_info.P[3] = (-r_fx * baseline);
 		right_info.P[5] = r_fy;
 		right_info.P[6] = r_cy;
 		right_info.P[10] = 1.0;
@@ -366,12 +405,15 @@ public:
 	}
 
 private:
+  int device_id_;
 	int resolution_;
 	double frame_rate_;
 	bool show_image_, load_zed_config_;
 	double width_, height_;
 	std::string left_frame_id_, right_frame_id_;
 	std::string config_file_location_;
+  std::string left_camera_info_url_;
+  std::string right_camera_info_url_;
 };
 
 }

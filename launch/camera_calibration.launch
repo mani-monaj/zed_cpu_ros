@@ -1,14 +1,18 @@
+<?xml version="1.0"?>
 <launch>
+  <arg name="size" default="13x9"/>
+  <arg name="square" default="0.038"/>
+  <arg name="no-service-check" default="true"/>
+  <arg name="camera_namespace" default="camera"/>
 
-    <include file="$(find zed_cpu_ros)/launch/zed_cpu_ros.launch"/>
+  <include file="$(find zed_cpu_ros)/launch/zed_cpu_ros.launch">
+    <arg name="camera_namespace" value="$(arg camera_namespace)"/>
+  </include>
 
-    <arg name="size" default="8x6"/>
-    <arg name="square" default="0.108"/>
-    <arg name="no-service-check" default="true"/>
-
-    <node pkg="camera_calibration" type="cameracalibrator.py" name="camera_calibration" output="screen" args="">
-        <remap from="right" to="/camera/right/image_raw"/>
-        <remap from="left" to="/camera/left/image_raw"/>
+  <group ns="$(arg camera_namespace)">
+    <node pkg="camera_calibration" type="cameracalibrator.py" name="camera_calibration" output="screen" args="--size $(arg size) --square $(arg square)">
+      <remap from="right" to="right/image_raw"/>
+      <remap from="left"  to="left/image_raw"/>
     </node>
-
+  </group>
 </launch>
