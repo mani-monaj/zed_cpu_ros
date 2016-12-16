@@ -3,9 +3,11 @@
   <arg name="size" default="13x9"/>
   <arg name="square" default="0.038"/>
   <arg name="no-service-check" default="true"/>
+  <arg name="zed_serial" default="1267" />
   <arg name="camera_namespace" default="camera"/>
 
   <include file="$(find zed_cpu_ros)/launch/zed_cpu_ros.launch">
+    <arg name="zed_serial" value="$(arg zed_serial)" />
     <arg name="camera_namespace" value="$(arg camera_namespace)"/>
   </include>
 

@@ -1,28 +1,25 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="config_file_location" default="$(find zed_cpu_ros)/config/SN11512.conf"/>
+  <arg name="zed_serial" default="1267" />
   <arg name="camera_namespace" default="camera"/>
+  <arg name="config_file_location" default="$(find zed_cpu_ros)/config/$(arg zed_serial)/SN$(arg zed_serial).conf"/>
 
   <group ns="$(arg camera_namespace)">
     <node pkg="zed_cpu_ros" type="zed_cpu_ros" name="zed_cpu_ros_node" output="screen">
       <param name="device_id" value="0"/>
       <param name="resolution" value="2"/>
-      <param name="frame_rate" value="10"/>
+      <param name="frame_rate" value="30"/>
       <param name="config_file_location" value="$(arg config_file_location)"/>
       <param name="show_image" value="false"/>
       <param name="left_frame_id" value="$(arg camera_namespace)_left_optical_frame"/>
       <param name="right_frame_id" value="$(arg camera_namespace)_right_optical_frame"/>
-      <param name="load_zed_config" value="false"/>
+      <param name="load_zed_config" value="true"/>
       <!-- only used when load_zed_config = false -->
-      <param name="left_camera_info_url" value="package://zed_cpu_ros/config/11512/left.yaml" />
-      <param name="right_camera_info_url" value="package://zed_cpu_ros/config/11512/right.yaml" />
+      <param name="left_camera_info_url" value="package://zed_cpu_ros/config/$(arg zed_serial)/left.yaml" />
+      <param name="right_camera_info_url" value="package://zed_cpu_ros/config/$(arg zed_serial)/right.yaml" />
     </node>
-    <!-- TF -->
-    <!--
-    <node pkg="tf" type="static_transform_publisher" name="static_tf_1" args="0.25 0 0.4 0 0 0 1 camera_link camera_left_link 100"/>
-    <node pkg="tf" type="static_transform_publisher" name="static_tf_2" args="0 0.120 0 0 0 0 1 camera_left_link camera_right_link 100"/>
-    -->
-    <!-- inspired from rgbd_launch -->
+
+    <!-- TF: inspired from rgbd_launch -->
     <arg name="tf_prefix" default="" />
     <arg name="pi_2" value="1.5707963267948966" />
     <arg name="baseline" value="0.12" />
