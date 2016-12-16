@@ -5,21 +5,39 @@
 
   <group ns="$(arg camera_namespace)">
     <node pkg="zed_cpu_ros" type="zed_cpu_ros" name="zed_cpu_ros_node" output="screen">
-      <param name="device_id" value="1"/>
+      <param name="device_id" value="0"/>
       <param name="resolution" value="2"/>
-      <param name="frame_rate" value="30"/>
+      <param name="frame_rate" value="10"/>
       <param name="config_file_location" value="$(arg config_file_location)"/>
       <param name="show_image" value="false"/>
-      <param name="left_frame_id" value="left_frame"/>
-      <param name="right_frame_id" value="left_frame"/>
+      <param name="left_frame_id" value="$(arg camera_namespace)_left_optical_frame"/>
+      <param name="right_frame_id" value="$(arg camera_namespace)_right_optical_frame"/>
       <param name="load_zed_config" value="false"/>
       <!-- only used when load_zed_config = false -->
-      <param name="left_camera_info_url" value="package://zed_cpu_ros/config/left.yaml" />
-      <param name="right_camera_info_url" value="package://zed_cpu_ros/config/right.yaml" />
+      <param name="left_camera_info_url" value="package://zed_cpu_ros/config/11512/left.yaml" />
+      <param name="right_camera_info_url" value="package://zed_cpu_ros/config/11512/right.yaml" />
     </node>
     <!-- TF -->
-    <node pkg="tf" type="static_transform_publisher" name="static_tf_1" args="0.25 0 0.4 0 0 0 1 base_link left_frame 100"/>
-    <node pkg="tf" type="static_transform_publisher" name="static_tf_2" args="0 0.120 0 0 0 0 1 left_frame right_frame 100"/>
+    <!--
+    <node pkg="tf" type="static_transform_publisher" name="static_tf_1" args="0.25 0 0.4 0 0 0 1 camera_link camera_left_link 100"/>
+    <node pkg="tf" type="static_transform_publisher" name="static_tf_2" args="0 0.120 0 0 0 0 1 camera_left_link camera_right_link 100"/>
+    -->
+    <!-- inspired from rgbd_launch -->
+    <arg name="tf_prefix" default="" />
+    <arg name="pi_2" value="1.5707963267948966" />
+    <arg name="baseline" value="0.12" />
+    <arg name="baseline_2" value="0.06" />
+    <arg name="optical_rotate" value="0 0 0 -$(arg pi_2) 0 -$(arg pi_2)" />
+
+    <node pkg="tf" type="static_transform_publisher" name="$(arg camera_namespace)_base_link"
+      args="0.016 $(arg baseline_2) 0.0135 0 0 0 $(arg tf_prefix)/$(arg camera_namespace)_link $(arg tf_prefix)/$(arg camera_namespace)_left_frame 100" />
+    <node pkg="tf" type="static_transform_publisher" name="$(arg camera_namespace)_base_link1"
+      args="0 -$(arg baseline) 0 0 0 0 $(arg tf_prefix)/$(arg camera_namespace)_left_frame $(arg tf_prefix)/$(arg camera_namespace)_right_frame 100" />
+    
+    <node pkg="tf" type="static_transform_publisher" name="$(arg camera_namespace)_base_link2"
+      args="$(arg optical_rotate) $(arg tf_prefix)/$(arg camera_namespace)_left_frame $(arg tf_prefix)/$(arg camera_namespace)_left_optical_frame  100" />
+    <node pkg="tf" type="static_transform_publisher" name="$(arg camera_namespace)_base_link3"
+      args="$(arg optical_rotate) $(arg tf_prefix)/$(arg camera_namespace)_right_frame $(arg tf_prefix)/$(arg camera_namespace)_right_optical_frame 100" />
   </group>
 
 </launch>

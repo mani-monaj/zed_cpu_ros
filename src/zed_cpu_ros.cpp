@@ -135,12 +135,13 @@ public:
 		private_nh.param("resolution", resolution_, 1);
 		private_nh.param("frame_rate", frame_rate_, 30.0);
 		private_nh.param("config_file_location", config_file_location_, std::string("~/SN1267.conf"));
-		private_nh.param("left_frame_id", left_frame_id_, std::string("left_camera"));
-		private_nh.param("right_frame_id", right_frame_id_, std::string("right_camera"));
+		// TODO: Replace the `camera_` part with nh.getNamespace(), strip the `/`
+		private_nh.param("left_frame_id", left_frame_id_, std::string("camera_left_optical_frame"));
+		private_nh.param("right_frame_id", right_frame_id_, std::string("camera_right_optical_frame"));
 		private_nh.param("show_image", show_image_, false);
 		private_nh.param("load_zed_config", load_zed_config_, true);
-    private_nh.param("left_camer_info_url", left_camera_info_url_, std::string("package://zed_cpu_ros/config/left.yaml"));
-    private_nh.param("right_camer_info_url", right_camera_info_url_, std::string("package://zed_cpu_ros/config/right.yaml"));
+    private_nh.param("left_camera_info_url", left_camera_info_url_, std::string("package://zed_cpu_ros/config/left.yaml"));
+    private_nh.param("right_camera_info_url", right_camera_info_url_, std::string("package://zed_cpu_ros/config/right.yaml"));
 
 		ROS_INFO("Try to initialize the camera");
     StereoCamera zed(device_id_, resolution_, frame_rate_);
@@ -211,10 +212,10 @@ public:
 			}
 
 			if (left_image_pub.getNumSubscribers() > 0) {
-				publishImage(left_image, left_image_pub, "left_frame", now);
+				publishImage(left_image, left_image_pub, left_frame_id_, now);
 			}
 			if (right_image_pub.getNumSubscribers() > 0) {
-				publishImage(right_image, right_image_pub, "right_frame", now);
+				publishImage(right_image, right_image_pub, right_frame_id_, now);
 			}
 			if (left_cam_info_pub.getNumSubscribers() > 0) {
 				publishCamInfo(left_cam_info_pub, left_info, now);
